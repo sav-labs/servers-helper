@@ -6,6 +6,7 @@ import logging
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
 from aiogram.types import BotCommand, Message
+from openai import APIConnectionError, APIStatusError
 
 from agent import get_agent_response
 from config import app_config, settings
@@ -19,7 +20,6 @@ logger = logging.getLogger(__name__)
 bot = Bot(token=settings.telegram_token)
 dp = Dispatcher()
 
-# Telegram message length limit
 _TG_MAX_LENGTH = 4096
 
 
@@ -30,7 +30,6 @@ def _is_allowed(user_id: int) -> bool:
 
 
 def _split_message(text: str) -> list[str]:
-    """Split long text into Telegram-sized chunks."""
     chunks = []
     while text:
         chunks.append(text[:_TG_MAX_LENGTH])
@@ -38,18 +37,32 @@ def _split_message(text: str) -> list[str]:
     return chunks
 
 
-async def _safe_send(message: Message, text: str, edit_msg=None) -> None:
-    """Send or edit a message, falling back to plain text if HTML is invalid."""
+async def _safe_send(message: Message, text: str) -> None:
+    """Send a message, falling back to plain text if HTML is invalid."""
     for parse_mode in ("HTML", None):
         try:
-            if edit_msg:
-                await edit_msg.edit_text(text, parse_mode=parse_mode)
-            else:
-                await message.answer(text, parse_mode=parse_mode)
+            await message.answer(text, parse_mode=parse_mode)
             return
         except Exception:
             if parse_mode is None:
                 raise
+
+
+async def _keep_typing(chat_id: int, stop: asyncio.Event) -> None:
+    """Send 'typing' action every 4s until stop is set.
+
+    Telegram's typing indicator disappears after 5s, so we refresh it
+    periodically to keep it visible while the agent is thinking.
+    """
+    while not stop.is_set():
+        try:
+            await bot.send_chat_action(chat_id, "typing")
+        except Exception:
+            pass
+        try:
+            await asyncio.wait_for(stop.wait(), timeout=4)
+        except asyncio.TimeoutError:
+            pass
 
 
 @dp.message(CommandStart())
@@ -73,23 +86,33 @@ async def handle_message(message: Message) -> None:
         logger.warning("Blocked unauthorized user %s", message.from_user.id)
         return
 
-    await bot.send_chat_action(message.chat.id, "typing")
-    status_msg = await message.answer("⏳ Думаю...")
+    stop_typing = asyncio.Event()
+    typing_task = asyncio.create_task(_keep_typing(message.chat.id, stop_typing))
 
     try:
         response = await get_agent_response(
             user_message=message.text,
             thread_id=str(message.chat.id),
         )
-
-        chunks = _split_message(response)
-        await _safe_send(message, chunks[0], edit_msg=status_msg)
-        for chunk in chunks[1:]:
+        for chunk in _split_message(response):
             await _safe_send(message, chunk)
 
+    except APIConnectionError:
+        logger.error("OpenRouter unreachable after retries for user %s", message.from_user.id)
+        await message.answer("⚠️ OpenRouter недоступен после нескольких попыток. Попробуй позже.")
+    except APIStatusError as exc:
+        logger.error("OpenRouter API error %s for user %s", exc.status_code, message.from_user.id)
+        await message.answer(f"⚠️ Ошибка API ({exc.status_code}): {exc.message}")
     except Exception as exc:
         logger.exception("Unhandled error for user %s", message.from_user.id)
-        await status_msg.edit_text(f"❌ Ошибка: {exc}")
+        await message.answer(f"❌ Неожиданная ошибка: {type(exc).__name__}")
+    finally:
+        stop_typing.set()
+        typing_task.cancel()
+        try:
+            await typing_task
+        except asyncio.CancelledError:
+            pass
 
 
 async def main() -> None:

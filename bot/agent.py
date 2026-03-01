@@ -6,6 +6,14 @@ from langchain_core.messages import SystemMessage
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
+from openai import APIConnectionError
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+    before_sleep_log,
+)
 
 from config import app_config, settings
 from prompts.system_prompt import build_system_prompt
@@ -30,19 +38,23 @@ _agent = create_react_agent(
 )
 
 
+@retry(
+    retry=retry_if_exception_type(APIConnectionError),
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=8),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+    reraise=True,
+)
 async def get_agent_response(user_message: str, thread_id: str) -> str:
     """Invoke the agent and return the final text response.
 
+    Retries up to 3 times on connection errors (2s → 4s → 8s backoff).
     Thread ID is the LangGraph checkpoint key — conversation history
     is maintained separately per Telegram chat.
     """
     config = {"configurable": {"thread_id": thread_id}}
-    try:
-        result = await _agent.ainvoke(
-            {"messages": [{"role": "user", "content": user_message}]},
-            config=config,
-        )
-        return result["messages"][-1].content
-    except Exception:
-        logger.exception("Agent error for thread %s", thread_id)
-        raise
+    result = await _agent.ainvoke(
+        {"messages": [{"role": "user", "content": user_message}]},
+        config=config,
+    )
+    return result["messages"][-1].content
