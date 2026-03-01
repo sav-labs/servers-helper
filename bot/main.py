@@ -38,6 +38,20 @@ def _split_message(text: str) -> list[str]:
     return chunks
 
 
+async def _safe_send(message: Message, text: str, edit_msg=None) -> None:
+    """Send or edit a message, falling back to plain text if Markdown is invalid."""
+    for parse_mode in ("Markdown", None):
+        try:
+            if edit_msg:
+                await edit_msg.edit_text(text, parse_mode=parse_mode)
+            else:
+                await message.answer(text, parse_mode=parse_mode)
+            return
+        except Exception:
+            if parse_mode is None:
+                raise
+
+
 @dp.message(CommandStart())
 async def cmd_start(message: Message) -> None:
     if not _is_allowed(message.from_user.id):
@@ -69,9 +83,9 @@ async def handle_message(message: Message) -> None:
         )
 
         chunks = _split_message(response)
-        await status_msg.edit_text(chunks[0], parse_mode="Markdown")
+        await _safe_send(message, chunks[0], edit_msg=status_msg)
         for chunk in chunks[1:]:
-            await message.answer(chunk, parse_mode="Markdown")
+            await _safe_send(message, chunk)
 
     except Exception as exc:
         logger.exception("Unhandled error for user %s", message.from_user.id)
