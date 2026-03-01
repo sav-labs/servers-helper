@@ -3,6 +3,9 @@ services:
     build: ./bot
     restart: unless-stopped
     env_file: .env
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     volumes:
       # SSH keys and config for connecting to remote servers
       - ~/.ssh:/root/.ssh:ro
