@@ -8,7 +8,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import BotCommand, Message
 
 from agent import get_agent_response
-from config import settings
+from config import app_config, settings
 
 logging.basicConfig(
     level=logging.INFO,
@@ -82,7 +82,7 @@ async def main() -> None:
     await bot.set_my_commands([
         BotCommand(command="start", description="Начало работы"),
     ])
-    logger.info("Bot started. Model: %s", settings.openrouter_model)
+    logger.info("Bot started. Model: %s", app_config.llm.model)
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
 
 
