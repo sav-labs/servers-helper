@@ -7,8 +7,8 @@ services:
       - 8.8.8.8
       - 1.1.1.1
     volumes:
-      # SSH keys and config for connecting to remote servers
-      - ~/.ssh:/root/.ssh:ro
+      # Mounted to a staging path; entrypoint.sh copies it with correct permissions
+      - ~/.ssh:/root/.ssh-ro:ro
       # Mount config.yaml so you can edit servers/model without rebuilding the image
       # After changes: docker compose restart bot
       - ./bot/config.yaml:/app/config.yaml:ro
