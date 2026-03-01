@@ -39,8 +39,8 @@ def _split_message(text: str) -> list[str]:
 
 
 async def _safe_send(message: Message, text: str, edit_msg=None) -> None:
-    """Send or edit a message, falling back to plain text if Markdown is invalid."""
-    for parse_mode in ("Markdown", None):
+    """Send or edit a message, falling back to plain text if HTML is invalid."""
+    for parse_mode in ("HTML", None):
         try:
             if edit_msg:
                 await edit_msg.edit_text(text, parse_mode=parse_mode)
@@ -59,11 +59,11 @@ async def cmd_start(message: Message) -> None:
     await message.answer(
         "Привет! Я DevOps-ассистент для твоей инфраструктуры.\n\n"
         "Спрашивай про серверы:\n"
-        "• *vdsina-netherlands* — VPS в Нидерландах\n"
-        "• *aeza-germany* — VPS в Германии\n"
-        "• *servers-helper* — домашний сервер\n\n"
+        "• <code>vdsina-netherlands</code> — VPS в Нидерландах\n"
+        "• <code>aeza-germany</code> — VPS в Германии\n"
+        "• <code>servers-helper</code> — домашний сервер\n\n"
         "Примеры: «что с германией?», «покажи контейнеры на vdsina», «перезапусти nginx на germany»",
-        parse_mode="Markdown",
+        parse_mode="HTML",
     )
 
 
