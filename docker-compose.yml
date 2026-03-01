@@ -1,0 +1,14 @@
+services:
+  bot:
+    build: ./bot
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      # SSH keys and config for connecting to remote servers
+      - ~/.ssh:/root/.ssh:ro
+      # Mount config.yaml so you can edit servers/model without rebuilding the image
+      # After changes: docker compose restart bot
+      - ./bot/config.yaml:/app/config.yaml:ro
+    extra_hosts:
+      # Resolves host.docker.internal → Docker host machine (used for servers-helper SSH)
+      - "host.docker.internal:host-gateway"

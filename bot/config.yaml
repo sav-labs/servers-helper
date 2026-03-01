@@ -1,0 +1,37 @@
+# ─────────────────────────────────────────────
+# LLM settings
+# Browse available models: https://openrouter.ai/models
+# ─────────────────────────────────────────────
+llm:
+  model: anthropic/claude-3.5-haiku
+  temperature: 0.2
+
+# ─────────────────────────────────────────────
+# SSH servers
+#
+# ssh_host  — alias from ~/.ssh/config on the servers-helper machine
+# description — shown to the LLM in its system prompt
+# tags        — optional labels (informational, used in prompt)
+#
+# To add a new server:
+#   1. Add SSH config entry on servers-helper (~/.ssh/config)
+#   2. Add an entry below
+#   3. Run: docker compose restart bot   (no rebuild needed)
+# ─────────────────────────────────────────────
+servers:
+  vdsina-netherlands:
+    ssh_host: vdsina-netherlands
+    description: "VPS в Нидерландах (хостинг vdsina)"
+    tags: [vpn, proxy, netherlands]
+
+  aeza-germany:
+    ssh_host: aeza-germany
+    description: "VPS в Германии (хостинг aeza)"
+    tags: [vpn, proxy, germany]
+
+  servers-helper:
+    # host.docker.internal → Docker host machine (configured via extra_hosts in docker-compose.yml)
+    # Requires: SSH daemon on host, user's key in ~/.ssh/authorized_keys
+    ssh_host: host.docker.internal
+    description: "Домашний сервер, здесь работает этот бот"
+    tags: [home, bot]
