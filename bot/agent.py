@@ -26,7 +26,7 @@ _agent = create_react_agent(
     model=_llm,
     tools=get_all_tools(),
     checkpointer=_memory,
-    state_modifier=SystemMessage(content=build_system_prompt()),
+    prompt=SystemMessage(content=build_system_prompt()),
 )
 
 
