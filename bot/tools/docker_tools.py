@@ -12,10 +12,10 @@ async def docker_list_containers(
     server: Annotated[str, "Server name: vdsina-netherlands | aeza-germany | servers-helper"],
 ) -> str:
     """List all Docker containers on the server with their name, image, status and ports."""
-    fmt = (
-        r'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
+    return await ssh_exec(
+        server,
+        r"docker ps -a --format '{{.Names}}|{{.Image}}|{{.Status}}|{{.Ports}}'",
     )
-    return await ssh_exec(server, f'docker ps -a --format "{fmt}"')
 
 
 @tool

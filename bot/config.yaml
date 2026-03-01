@@ -22,16 +22,13 @@ servers:
   vdsina-netherlands:
     ssh_host: vdsina-netherlands
     description: "VPS в Нидерландах (хостинг vdsina)"
-    tags: [vpn, proxy, netherlands]
 
   aeza-germany:
     ssh_host: aeza-germany
     description: "VPS в Германии (хостинг aeza)"
-    tags: [vpn, proxy, germany]
 
   servers-helper:
     # host.docker.internal → Docker host machine (configured via extra_hosts in docker-compose.yml)
     # Requires: SSH daemon on host, user's key in ~/.ssh/authorized_keys
     ssh_host: host.docker.internal
     description: "Домашний сервер, здесь работает этот бот"
-    tags: [home, bot]

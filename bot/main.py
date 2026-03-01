@@ -4,11 +4,11 @@ import asyncio
 import logging
 
 from aiogram import Bot, Dispatcher, F
-from aiogram.filters import CommandStart
+from aiogram.filters import Command, CommandStart
 from aiogram.types import BotCommand, Message
 from openai import APIConnectionError, APIStatusError
 
-from agent import get_agent_response
+from agent import get_agent_response, reset_thread
 from config import app_config, settings
 
 logging.basicConfig(
@@ -80,6 +80,14 @@ async def cmd_start(message: Message) -> None:
     )
 
 
+@dp.message(Command("reset"))
+async def cmd_reset(message: Message) -> None:
+    if not _is_allowed(message.from_user.id):
+        return
+    reset_thread(str(message.chat.id))
+    await message.answer("История диалога очищена. Начинаем с чистого листа.")
+
+
 @dp.message(F.text)
 async def handle_message(message: Message) -> None:
     if not _is_allowed(message.from_user.id):
@@ -118,6 +126,7 @@ async def handle_message(message: Message) -> None:
 async def main() -> None:
     await bot.set_my_commands([
         BotCommand(command="start", description="Начало работы"),
+        BotCommand(command="reset", description="Очистить историю диалога"),
     ])
     logger.info("Bot started. Model: %s", app_config.llm.model)
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())

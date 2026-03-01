@@ -38,6 +38,13 @@ _agent = create_react_agent(
 )
 
 
+def reset_thread(thread_id: str) -> None:
+    """Delete all conversation history for a given chat."""
+    config = {"configurable": {"thread_id": thread_id}}
+    _memory.delete(config)
+    logger.info("Conversation reset for thread %s", thread_id)
+
+
 @retry(
     retry=retry_if_exception_type(APIConnectionError),
     stop=stop_after_attempt(3),
